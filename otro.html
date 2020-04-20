@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        .wrapper{
+            width: 750px;
+            height: 650px;
+            background-color: #fcf8f3;
+        }
+        .collideme1 {
+            border-radius: 50%;
+            height: 20px;
+            width: 20px;
+            display: inline-block;
+            position: absolute;
+        }
+
+        .collideme2 {
+            border-radius: 50%;
+            height: 20px;
+            width: 20px;
+            display: inline-block;
+            position: absolute;
+        }
+
+        #divone {
+            background-color: blue;
+            left: 0;
+            top: 0;
+        }
+
+        #divtwo {
+            /* border: 1px solid gray; */
+            background-color: lightcoral;
+            left: 50px;
+            top: 50px;
+        }
+
+        .collision-state {
+            background-color: green !important; /* lmao */
+        }
+        .tienda{
+            width: 70px;
+            height: 90px;
+            border-left: 1px solid gray;
+            border-right: 1px solid gray;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-6">
+                <div class="wrapper" id="wrap"></div>
+                <div class="tienda">
+                    <img src="home.png" width="40" style="margin-top: 50px;">
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="instrucciones mt-5">
+                    <ul>
+                        <h3>Instrucciones</h3>
+                        <li>Debes moverte rapidamente y apresurarte para llegar a tu casa a salvo, pues el virus del coronavirus se expande cada vez mas</li>
+                        <li>Entre mas tiempo te tardes, el virus se propaga más y más</li>
+                        <li>Gana quien llegue en un menor tiempo</li>
+                        <li>Recuerda mantener tu distancia</li>
+                    </ul>
+                </div>
+                <div class="btn">
+                    <button class="btn btn-info" id="iniciar" onclick="playGame()">EMPEZAR</button>
+                    <button class="btn btn-warning" id="reiniciar" onclick="restartame()" style="display: none;">JUGAR DE NUEVO</button><br>
+                    <span class="text-muted" id="min" style="font-size: 35px;">00</span>:<span class="text-muted" id="seg" style="font-size: 35px;">00</span>
+                </div>
+                <div class="alert alert-danger mt-5" role="alert" id="msj" style="display: none;">
+                    Perdiste, te has infectado del Coronavirus!
+                </div>
+                <div class="alert alert-success" role="alert" id="msj-bien" style="display: none;">
+                    Felicidades, llegaste sano a tu casa!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        var timerJuego = ''
+        var timer = ''
+        var s = 0
+        var m = 0
+        var min = document.getElementById('min')
+        var seg = document.getElementById('seg')
+
+        function restartame() {
+            location.reload()
+        }
+
+        function playGame() {
+            document.getElementById('iniciar').style.display = 'none'
+            timerJuego = setInterval(time,500)
+            setup()
+        }
+
+        function time() {
+            if(s == 60){
+                s = 0
+                m++
+                min.innerHTML = m
+                if(m == 0){
+                    m = 0
+                }
+            }
+            if(s < 10){ seg.innerHTML = `0${s}` }else{ seg.innerHTML = s }
+            if(m < 10){ min.innerHTML = `0${m}` }else{ min.innerHTML = m }
+           s++
+
+        }
+
+        const collider = {
+            moveableDiv: null,
+            staticDivs: [],
+            checkCollision: function() {
+                let hasJustCollided = false
+                for (let i = 0; i < this.staticDivs.length; i++) {
+                const currentDiv = this.staticDivs[i]
+                const dx = currentDiv.position.left - this.moveableDiv.position.left
+                const dy = currentDiv.position.top - this.moveableDiv.position.top
+                const distance = Math.sqrt(dx * dx + dy * dy)
+                if (distance < currentDiv.position.radius + this.moveableDiv.position.radius) {
+                        hasJustCollided = true
+                        if (!this.moveableDiv.ref.classList.contains('collision-state')) {
+                        this.moveableDiv.ref.classList.add('collision-state')
+                        // console.log('infectado')
+                        document.getElementById('msj').style.display = 'block'
+                        clearInterval(timerJuego)
+                        clearInterval(timer)
+                        document.getElementById('reiniciar').style.display = 'block'
+                    }
+                } else if (this.moveableDiv.ref.classList.contains('collision-state') && !hasJustCollided) {
+                    this.moveableDiv.ref.classList.remove('collision-state')
+                    }
+                }
+            },
+        }
+
+        // the prototype for my base div
+        window.BaseDiv = function(div) {
+            this.position = {
+                left: div.getBoundingClientRect().left,
+                top: div.getBoundingClientRect().top,
+                radius: div.getBoundingClientRect().height / 2,
+            }
+        }
+
+        window.MoveDiv = function(ref) {
+        this.ref = ref
+            BaseDiv.call(this, ref)
+        }
+
+        MoveDiv.prototype.moveOnKeyPress = function(e) {
+            switch(e.which) {
+                case 37:
+                this.shiftPosition(-5, 0)
+                break;
+                case 38:
+                this.shiftPosition(0, -5)
+                break;
+                case 39:
+                this.shiftPosition(5, 0)
+                break;
+                case 40:
+                this.shiftPosition(0, 5)
+                break;
+                default:
+                console.log('not an arrow')
+                break;
+            }
+        }
+
+        MoveDiv.prototype.shiftPosition = function(x, y) {
+            this.position.left += x
+            this.position.top += y
+            this.reDraw(this.ref, this.position)
+        }
+
+        MoveDiv.prototype.reDraw = function(ref, position) {
+            ref.setAttribute('style', `left: ${position.left}px; top: ${position.top}px`)
+            if(position.left == 750){
+                position.left = 740
+            }
+            if(position.top == 635 && position.left >= 75 ){
+                position.top = 625
+            }
+            if(position.top == -5){
+                position.top = 0
+            }
+            if(position.left == 10){
+                position.left = 15
+            }
+            console.log(position.left)
+            console.log(position.top)
+            if((position.left == 40 && position.top == 710) || (position.left == 45 && position.top == 710) || (position.left == 30 && position.top == 710) ||
+                (position.left == 40 && position.top == 715) || (position.left == 45 && position.top == 715) || (position.left == 30 && position.top == 715) ||
+                (position.left == 40 && position.top == 720) || (position.left == 45 && position.top == 720) || (position.left == 30 && position.top == 720)){
+                document.getElementById('msj-bien').style.display = 'block'
+                clearInterval(timerJuego)
+                document.getElementById('reiniciar').style.display = 'block'
+            }
+            collider.checkCollision()
+        }
+
+        function setup() {
+        const container = document.querySelector('.wrapper')
+        // create a bunch of random divs
+        var i = 0
+        var acum = 6
+        timer = setInterval(function(){
+            acum += acum
+            for (let i = 0; i < acum; i++) {
+                const newStaticDiv = document.createElement('img')
+                newStaticDiv.src = 'coronavirus.png'
+                newStaticDiv.setAttribute('style', `left: ${Math.floor(Math.random() * 750)}px; top: ${Math.floor(Math.random() * 650)}px;`)
+                container.appendChild(newStaticDiv)
+                newStaticDiv.classList.add('collideme1')
+                collider.staticDivs.push(new BaseDiv(newStaticDiv))
+            }
+            if(i == 3){
+                clearInterval(timer)
+            }
+            i++
+        }, 3000)
+        
+        // create the moveable div
+        const newMoveableDiv = document.createElement('div')
+        newMoveableDiv.setAttribute('style', 'left: 740px; top: 10px;')
+        newMoveableDiv.setAttribute('id', 'divtwo')
+        newMoveableDiv.classList.add('collideme2')
+        container.appendChild(newMoveableDiv)
+        collider.moveableDiv = new MoveDiv(newMoveableDiv)
+
+        document.addEventListener('keydown', (e) => collider.moveableDiv.moveOnKeyPress(e))
+        }
+
+    </script>
+</body>
+</html>
